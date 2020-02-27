@@ -1,4 +1,4 @@
-FROM sriggi/caesar-base-docker:latest
+FROM sriggi/caesar-base:latest
 MAINTAINER Simone Riggi "simone.riggi@gmail.com"
 
 #################################
