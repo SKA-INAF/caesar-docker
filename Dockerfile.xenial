@@ -16,20 +16,36 @@ ENV SETVARS_FILE=/etc/profile.d/setupSoft.sh
 ###    CAESAR
 #################################
 # Set env variables and create installation dirs
-ENV CAESAR_VERSION=trunk
+ENV CAESAR_VERSION=install
 ENV CAESAR_URL=https://github.com/SKA-INAF/caesar.git
 ENV CAESAR_SRC_DIR=${SOFTDIR_SRCS}/caesar	
 ENV CAESAR_BUILD_DIR=${SOFTDIR_SRCS}/caesar-build
-ENV CAESAR_INSTALL_DIR=${SOFTDIR}/CAESAR/${CAESAR_VERSION}
+ENV CAESAR_INSTALL_DIR=${SOFTDIR}/caesar/${CAESAR_VERSION}
 ENV CAESAR_SCRIPTS_DIR=${CAESAR_INSTALL_DIR}/scripts
 
 # Create build and install dirs	
 RUN echo "Creating CAESAR build dir $CAESAR_BUILD_DIR and install dir $CAESAR_INSTALL_DIR ..."
-RUN mkdir -p $CAESAR_BUILD_DIR \
-	&& mkdir -p $CAESAR_INSTALL_DIRS
+RUN mkdir -p ${CAESAR_BUILD_DIR} \
+	&& mkdir -p ${CAESAR_INSTALL_DIR}
 
 # Download caesar
 WORKDIR ${SOFTDIR_SRCS}
 RUN echo "Downloading caesar from github repository ${CAESAR_URL} ..."
 RUN git clone -b devel ${CAESAR_URL}
+
+# Configure caesar
+WORKDIR ${CAESAR_BUILD_DIR}
+RUN echo "Configuring caesar cmake build ..."
+RUN source ${SETVARS_FILE} \
+  && cmake -DCMAKE_INSTALL_PREFIX="${CAESAR_INSTALL_DIR}" -DENABLE_R=OFF -DBUILD_APPS=ON -DENABLE_OPENMP=ON -DENABLE_MPI=ON -DENABLE_TEST=OFF -DBUILD_DOC=OFF -DENABLE_VTK=OFF "${CAESAR_SRC_DIR}"
+
+# Build caesar 	
+RUN echo "Building caesar ..."
+RUN make
+
+# Install caesar
+RUN echo "Installing caesar ..."
+RUN make install
+
+
 
