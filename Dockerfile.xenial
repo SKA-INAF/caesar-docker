@@ -36,7 +36,7 @@ RUN git clone -b devel ${CAESAR_URL}
 # Configure caesar
 WORKDIR ${CAESAR_BUILD_DIR}
 RUN echo "Configuring caesar cmake build ..."
-RUN source ${SETVARS_FILE} \
+RUN /bin/bash -c "source ${SETVARS_FILE}" \
   && cmake -DCMAKE_INSTALL_PREFIX="${CAESAR_INSTALL_DIR}" -DENABLE_R=OFF -DBUILD_APPS=ON -DENABLE_OPENMP=ON -DENABLE_MPI=ON -DENABLE_TEST=OFF -DBUILD_DOC=OFF -DENABLE_VTK=OFF "${CAESAR_SRC_DIR}"
 
 # Build caesar 	
