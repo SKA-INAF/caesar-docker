@@ -1,0 +1,84 @@
+FROM sriggi/caesar-base:light
+MAINTAINER Simone Riggi "simone.riggi@gmail.com"
+
+#################################
+###    CREATE DIRS
+#################################	
+# Define env variables
+ENV SOFTDIR=/opt/Software
+ENV SOFTDIR_SRCS=${SOFTDIR}/Sources
+ENV SOFTDIR_TAR=${SOFTDIR}/TarFiles
+
+# Define setvars file
+ENV SETVARS_FILE=/etc/profile.d/setupSoft.sh
+
+#################################
+###    CAESAR
+#################################
+# Set env variables and create installation dirs
+ENV CAESAR_VERSION=install
+ENV CAESAR_URL=https://github.com/SKA-INAF/caesar.git
+ENV CAESAR_SRC_DIR=${SOFTDIR_SRCS}/caesar	
+ENV CAESAR_BUILD_DIR=${SOFTDIR_SRCS}/caesar-build
+ENV CAESAR_INSTALL_DIR=${SOFTDIR}/caesar/${CAESAR_VERSION}
+ENV CAESAR_SCRIPTS_DIR=${CAESAR_INSTALL_DIR}/scripts
+
+# Create build and install dirs	
+RUN echo "Creating CAESAR build dir $CAESAR_BUILD_DIR and install dir $CAESAR_INSTALL_DIR ..."
+RUN mkdir -p ${CAESAR_BUILD_DIR} \
+	&& mkdir -p ${CAESAR_INSTALL_DIR}
+
+# Download caesar
+WORKDIR ${SOFTDIR_SRCS}
+RUN echo "Downloading caesar from github repository ${CAESAR_URL} ..."
+RUN git clone -b devel ${CAESAR_URL}
+
+WORKDIR ${CAESAR_SRC_DIR}
+RUN git pull origin devel
+
+# Configure caesar
+WORKDIR ${CAESAR_BUILD_DIR}
+RUN echo "Configuring caesar cmake build ..."
+RUN . ${SETVARS_FILE} \
+  && cmake -DCMAKE_INSTALL_PREFIX="${CAESAR_INSTALL_DIR}" -DENABLE_R=OFF -DBUILD_APPS=ON -DENABLE_OPENMP=ON -DENABLE_MPI=ON -DENABLE_TEST=OFF -DBUILD_DOC=OFF -DENABLE_VTK=OFF "${CAESAR_SRC_DIR}"
+
+# Build caesar 	
+RUN echo "Building caesar ..."
+RUN make
+
+# Install caesar
+RUN echo "Installing caesar ..."
+RUN make install
+
+# Set variables
+ENV CAESAR_DIR=${CAESAR_INSTALL_DIR}
+ENV CAESAR_SCRIPTS_DIR=${CAESAR_SCRIPTS_DIR}
+ENV PATH=${PATH}:${CAESAR_INSTALL_DIR}/bin:${CAESAR_SCRIPTS_DIR}:$PATH
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CAESAR_INSTALL_DIR}/lib
+
+RUN echo "Setting up env variables for caesar ..."
+RUN echo "export CAESAR_DIR=${CAESAR_INSTALL_DIR}" >> "$SETVARS_FILE"
+RUN echo "export CAESAR_SCRIPTS_DIR=${CAESAR_SCRIPTS_DIR}" >> "$SETVARS_FILE"
+RUN echo 'export PATH=$CAESAR_DIR/bin:$CAESAR_SCRIPTS_DIR:$PATH' >> "$SETVARS_FILE"
+RUN echo 'export LD_LIBRARY_PATH=$CAESAR_DIR/lib:$LD_LIBRARY_PATH' >> "$SETVARS_FILE"
+RUN echo '' >> "$SETVARS_FILE"
+
+# Create rootlogon with CAESAR libs
+ENV ROOT_LOGON_DIR="$SOFTDIR"
+ENV ROOT_LOGON_FILE="$ROOT_LOGON_DIR/rootlogon.C"
+
+RUN echo "Creating ROOT logon file $ROOT_LOGON_FILE ..."
+RUN echo '{' > "$ROOT_LOGON_FILE"
+RUN printf '	cout << "\\n\\t******************************" << endl;\n' >> "$ROOT_LOGON_FILE"
+RUN printf '	cout << "\\t* Welcome to ROOT v" << gROOT->GetVersion() << "  *" << endl;\n' >> "$ROOT_LOGON_FILE"
+RUN printf '	cout << "\\t******************************\\n" << endl;\n' >> "$ROOT_LOGON_FILE"
+RUN echo '' >> "$ROOT_LOGON_FILE"
+RUN echo 'gROOT->SetStyle("Plain");' >> "$ROOT_LOGON_FILE"
+RUN echo 'gSystem->Load("'"$CAESAR_INSTALL_DIR/lib/libCaesar.so"'");' >> "$ROOT_LOGON_FILE"
+RUN echo 'gROOT->ProcessLine(".include '"$CAESAR_INSTALL_DIR/include"'");' >> "$ROOT_LOGON_FILE"
+RUN echo 'gROOT->ProcessLine("using namespace Caesar;");' >> "$ROOT_LOGON_FILE"
+RUN echo 'gROOT->ProcessLine("LoggerManager::Instance().CreateConsoleLogger(\"INFO\",\"logger\",\"System.out\");");' >> "$ROOT_LOGON_FILE"	
+RUN echo '}' >> "$ROOT_LOGON_FILE"
+
+
+
