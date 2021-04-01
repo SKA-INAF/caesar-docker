@@ -80,5 +80,13 @@ RUN echo 'gROOT->ProcessLine("using namespace Caesar;");' >> "$ROOT_LOGON_FILE"
 RUN echo 'gROOT->ProcessLine("LoggerManager::Instance().CreateConsoleLogger(\"INFO\",\"logger\",\"System.out\");");' >> "$ROOT_LOGON_FILE"	
 RUN echo '}' >> "$ROOT_LOGON_FILE"
 
+# Fix PYTHONPATH (remove reference to python3)
+ENV PYTHONPATH=${ROOTSYS}/lib
+
+# Simlink python3 to python3.6
+RUN ln -sf /usr/bin/python3.6 $(which python3)
+
+
+
 
 
